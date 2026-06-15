@@ -30,6 +30,7 @@
 - `settings`
 - `matches`
 - `standings`
+- `cache`
 - `logs`
 
 ## ตัวอย่าง settings

@@ -84,7 +84,8 @@ function createResultsFlex(results) {
         layout: 'vertical',
         spacing: 'md',
         contents: results.slice(0, 4).map(createResultRow_)
-      }
+      },
+      footer: createActionFooter_()
     }
   };
 }
@@ -107,7 +108,8 @@ function createAllResultsFlexMessages(results) {
           layout: 'vertical',
           spacing: 'md',
           contents: resultChunk.map(createResultRow_)
-        }
+        },
+        footer: createActionFooter_()
       }
     };
   });
@@ -160,21 +162,12 @@ function createHelpFlex() {
 }
 
 function createCompactCommandMenuFlex() {
-  var commands = [
-    ['/today', 'Today'],
-    ['/tomorrow', 'Tomorrow'],
-    ['/schedule', 'Schedule'],
-    ['/standings', 'Standings'],
-    ['/results', 'Results'],
-    ['/allresults', 'All Results']
-  ];
-
   return {
     type: 'flex',
-    altText: 'Command Menu',
+    altText: 'เมนูคำสั่ง',
     contents: {
       type: 'bubble',
-      size: 'mega',
+      size: 'kilo',
       header: {
         type: 'box',
         layout: 'vertical',
@@ -182,22 +175,23 @@ function createCompactCommandMenuFlex() {
         paddingAll: '14px',
         contents: [
           createText_('World Cup 2026', 'xs', '#DDEBFF', true),
-          createText_('Next Command', 'lg', FLEX_COLORS.white, true)
+          createText_('เมนูคำสั่ง', 'lg', FLEX_COLORS.white, true)
         ]
       },
       body: {
         type: 'box',
         layout: 'vertical',
-        spacing: 'sm',
         backgroundColor: '#F7FAFC',
-        contents: chunkArray_(commands, 2).map(function(row) {
-          return {
-            type: 'box',
-            layout: 'horizontal',
-            spacing: 'sm',
-            contents: row.map(createMenuButton_)
-          };
-        })
+        contents: [
+          createText_('กดเพื่อเปิดรายการคำสั่งทั้งหมด', 'sm', FLEX_COLORS.gray, false, 'wrap')
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          createMessageButton_('เปิดเมนู /help', '/help')
+        ]
       }
     }
   };
@@ -297,13 +291,7 @@ function createMatchesFlex_(title, matches, buttonLabel) {
         spacing: 'md',
         contents: matches.slice(0, 8).map(createMatchRow_)
       },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          createUriButton_(buttonLabel, getConfig('BASE_DASHBOARD_URL') || 'https://www.fifa.com/')
-        ]
-      }
+      footer: createActionFooter_()
     }
   };
 }
@@ -314,34 +302,37 @@ function createStandingBubble_(groupName, teams, includeFooter) {
       type: 'box',
       layout: 'horizontal',
       spacing: 'xs',
+      paddingAll: '6px',
+      cornerRadius: '6px',
+      backgroundColor: team.position === 1 ? '#EEF6FF' : FLEX_COLORS.white,
       contents: [
-        createText_(String(team.position || ''), 'xxs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(team.team_name || '-', 'xxs', '#111827', true, 'wrap', 6),
-        createText_(String(team.played || 0), 'xxs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.won || 0), 'xxs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.draw || 0), 'xxs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.lost || 0), 'xxs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.points || 0), 'xxs', FLEX_COLORS.navy, true, 'none', 1)
+        createText_(String(team.position || ''), 'xs', FLEX_COLORS.gray, false, 'none', 1),
+        createText_(team.team_name || '-', 'xs', '#111827', true, 'wrap', 7),
+        createText_(String(team.played || 0), 'xs', FLEX_COLORS.gray, false, 'none', 1),
+        createText_(String(team.goal_difference || 0), 'xs', FLEX_COLORS.gray, false, 'none', 1),
+        createText_(String(team.points || 0), 'xs', FLEX_COLORS.navy, true, 'none', 1)
       ]
     };
   });
 
-  return {
+  var bubble = {
     type: 'bubble',
-    size: 'kilo',
+    size: 'mega',
     header: {
       type: 'box',
       layout: 'vertical',
       backgroundColor: FLEX_COLORS.navy,
-      paddingAll: '12px',
+      paddingAll: '16px',
       contents: [
-        createText_('Group ' + groupName, 'md', FLEX_COLORS.white, true)
+        createText_('FIFA World Cup 2026', 'xs', '#DDEBFF', true),
+        createText_('Group ' + groupName, 'xl', FLEX_COLORS.white, true)
       ]
     },
     body: {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
+      backgroundColor: '#F8FAFC',
       contents: [
         createStandingHeader_()
       ].concat(rows.length ? rows : [createText_('ยังไม่มีข้อมูลในตอนนี้', 'sm', FLEX_COLORS.gray, false)])
@@ -353,10 +344,7 @@ function createStandingBubble_(groupName, teams, includeFooter) {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
-      contents: [
-        createMessageButton_('Schedule', '/วันนี้'),
-        createUriButton_('Dashboard', getConfig('BASE_DASHBOARD_URL') || 'https://www.fifa.com/')
-      ]
+      contents: createFooterButtons_()
     };
   }
 
@@ -366,34 +354,39 @@ function createStandingBubble_(groupName, teams, includeFooter) {
 function createMatchRow_(match) {
   var homeScore = match.home_score !== '' && match.home_score !== undefined ? String(match.home_score) : '-';
   var awayScore = match.away_score !== '' && match.away_score !== undefined ? String(match.away_score) : '-';
-  var title = (match.home_team || '-') + ' ' + homeScore + ' - ' + awayScore + ' ' + (match.away_team || '-');
+  var isScored = homeScore !== '-' || awayScore !== '-';
+  var title = isScored
+    ? (match.home_team || '-') + ' ' + homeScore + ' - ' + awayScore + ' ' + (match.away_team || '-')
+    : (match.home_team || '-') + ' vs ' + (match.away_team || '-');
   return {
     type: 'box',
     layout: 'vertical',
-    paddingAll: '10px',
+    paddingAll: '12px',
     backgroundColor: FLEX_COLORS.lightGray,
-    cornerRadius: '8px',
+    cornerRadius: '10px',
     spacing: 'xs',
     contents: [
-      createText_(title, 'sm', '#111827', true, 'wrap'),
-      createText_('เวลาไทย: ' + (match.match_time_th || '-'), 'xs', FLEX_COLORS.gray, false),
-      createText_('สถานะ: ' + translateStatus_(match.status), 'xs', statusColor_(match.status), true),
+      createText_(title, 'md', '#111827', true, 'wrap'),
+      createText_(createMatchMeta_(match), 'xs', FLEX_COLORS.gray, false, 'wrap'),
+      createText_('สถานะ ' + translateStatus_(match.status), 'xs', statusColor_(match.status), true),
       createText_('สนาม: ' + (match.venue || '-'), 'xxs', FLEX_COLORS.gray, false, 'wrap')
     ]
   };
 }
 
 function createResultRow_(match) {
-  var title = (match.home_team || '-') + ' ' + (match.home_score || 0) + ' - ' + (match.away_score || 0) + ' ' + (match.away_team || '-');
+  var title = (match.home_team || '-') + ' ' + normalizeDisplayScore_(match.home_score) + ' - ' + normalizeDisplayScore_(match.away_score) + ' ' + (match.away_team || '-');
   return {
     type: 'box',
     layout: 'vertical',
-    paddingAll: '10px',
+    paddingAll: '12px',
     backgroundColor: FLEX_COLORS.lightGray,
-    cornerRadius: '8px',
+    cornerRadius: '10px',
+    spacing: 'xs',
     contents: [
-      createText_(title, 'sm', '#111827', true, 'wrap'),
-      createText_('Status: ' + (match.status || 'Finished'), 'xs', FLEX_COLORS.green, true)
+      createText_(title, 'md', '#111827', true, 'wrap'),
+      createText_(createMatchMeta_(match), 'xs', FLEX_COLORS.gray, false, 'wrap'),
+      createText_('สถานะ ' + translateStatus_(match.status || 'FINISHED'), 'xs', statusColor_(match.status || 'FINISHED'), true)
     ]
   };
 }
@@ -418,12 +411,10 @@ function createStandingHeader_() {
     spacing: 'xs',
     contents: [
       createText_('#', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('Team', 'xxs', FLEX_COLORS.gray, true, 'none', 5),
-      createText_('P', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('W', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('D', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('L', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('Pt', 'xxs', FLEX_COLORS.gray, true, 'none', 1)
+      createText_('ทีม', 'xxs', FLEX_COLORS.gray, true, 'none', 7),
+      createText_('แข่ง', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
+      createText_('+/-', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
+      createText_('แต้ม', 'xxs', FLEX_COLORS.gray, true, 'none', 1)
     ]
   };
 }
@@ -469,6 +460,56 @@ function createMessageButton_(label, text) {
       text: text
     }
   };
+}
+
+function createActionFooter_() {
+  return {
+    type: 'box',
+    layout: 'vertical',
+    spacing: 'sm',
+    contents: createFooterButtons_()
+  };
+}
+
+function createFooterButtons_() {
+  return [
+    createMessageButton_('ดูผลทั้งหมด', '/allresults'),
+    createMessageButton_('ตารางคะแนน', '/standings'),
+    createMessageButton_('โปรแกรมวันนี้', '/today')
+  ];
+}
+
+function createMatchMeta_(match) {
+  var groupName = match.group_name ? 'Group ' + String(match.group_name).toUpperCase() : (match.stage || 'World Cup');
+  return groupName + ' · ' + formatDisplayDate_(match.match_time_th || match.match_time_utc);
+}
+
+function formatDisplayDate_(value) {
+  if (!value) {
+    return '-';
+  }
+
+  var parsed = value instanceof Date ? value : new Date(value);
+  if (isNaN(parsed.getTime())) {
+    var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return Number(match[3]) + ' ' + thaiMonth_(Number(match[2])) + ' ' + match[1];
+    }
+    return String(value);
+  }
+
+  return Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'd') + ' ' +
+    thaiMonth_(Number(Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'M'))) + ' ' +
+    Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'yyyy');
+}
+
+function thaiMonth_(month) {
+  var months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  return months[month - 1] || '';
+}
+
+function normalizeDisplayScore_(score) {
+  return score === '' || score === null || score === undefined ? '-' : String(score);
 }
 
 function translateStatus_(status) {

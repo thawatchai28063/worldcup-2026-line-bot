@@ -29,6 +29,7 @@ var SHEET_HEADERS = {
     'points',
     'updated_at'
   ],
+  cache: ['key', 'value', 'updated_at'],
   logs: ['created_at', 'type', 'message', 'data']
 };
 
@@ -108,6 +109,8 @@ function saveMatches(matches) {
   clearDataRows_(sheet);
 
   if (!matches || !matches.length) {
+    setCacheValue_('matches_count', 0);
+    setCacheValue_('matches_last_sync', new Date());
     return;
   }
 
@@ -117,6 +120,8 @@ function saveMatches(matches) {
     });
   });
   sheet.getRange(2, 1, rows.length, SHEET_HEADERS.matches.length).setValues(rows);
+  setCacheValue_('matches_count', matches.length);
+  setCacheValue_('matches_last_sync', new Date());
 }
 
 function saveStandings(standings) {
@@ -126,6 +131,8 @@ function saveStandings(standings) {
 
   var rows = Array.isArray(standings) ? standings : flattenStandings_(standings);
   if (!rows.length) {
+    setCacheValue_('standings_count', 0);
+    setCacheValue_('standings_last_sync', new Date());
     return;
   }
 
@@ -135,6 +142,8 @@ function saveStandings(standings) {
     });
   });
   sheet.getRange(2, 1, values.length, SHEET_HEADERS.standings.length).setValues(values);
+  setCacheValue_('standings_count', rows.length);
+  setCacheValue_('standings_last_sync', new Date());
 }
 
 function appendLog(row) {
@@ -156,6 +165,37 @@ function setConfig(key, value) {
   }
 
   sheet.appendRow([key, value]);
+}
+
+function setCacheValue_(key, value) {
+  var sheet = getOrCreateSheet_('cache');
+  ensureHeader_(sheet, SHEET_HEADERS.cache);
+  var values = sheet.getDataRange().getValues();
+  var now = new Date();
+
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === key) {
+      sheet.getRange(i + 1, 2, 1, 2).setValues([[value, now]]);
+      return;
+    }
+  }
+
+  sheet.appendRow([key, value, now]);
+}
+
+function getCacheValue_(key) {
+  var sheet = getSheetByName_('cache');
+  if (!sheet || sheet.getLastRow() < 2) {
+    return '';
+  }
+
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === key) {
+      return values[i][1];
+    }
+  }
+  return '';
 }
 
 function getSheetByName_(sheetName) {

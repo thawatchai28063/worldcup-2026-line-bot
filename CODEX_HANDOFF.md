@@ -140,6 +140,7 @@ Thai legacy aliases are still supported for convenience.
 - `/results` should show only the latest 4 matches.
 - `/allresults` shows all cached finished matches in chunks.
 - `/standings` is split into carousel batches to stay under LINE Flex size limits.
+- `cache` sheet stores sync metadata such as match/standing counts and last sync time.
 
 ## Validation Commands
 
