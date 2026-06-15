@@ -118,6 +118,8 @@ function handleTextCommand(replyToken, userMessage) {
     } else if (command.indexOf('/ตารางคะแนนชุด ') === 0) {
       var standingRange = Number(command.replace('/ตารางคะแนนชุด ', '').trim());
       messages = [createStandingsRangeFlexMessage(fetchStandings(), standingRange)];
+    } else if (command === '/เมนูกลุ่ม') {
+      messages = [createGroupSelectMenuFlex()];
     } else if (command.indexOf('/กลุ่ม ') === 0) {
       var groupName = command.replace('/กลุ่ม ', '').trim().toUpperCase();
       messages = [createGroupStandingFlex(groupName, getGroupStandingData(groupName))];
@@ -194,6 +196,7 @@ function attachGlobalQuickReply_(messages) {
       createQuickReplyItem_('/standings2', 'D-F'),
       createQuickReplyItem_('/standings3', 'G-I'),
       createQuickReplyItem_('/standings4', 'J-L'),
+      createQuickReplyItem_('/groups', 'Groups'),
       createQuickReplyItem_('/knockout', 'Knockout'),
       createQuickReplyItem_('/results', 'Results'),
       createQuickReplyItem_('/allresults', 'All Results'),
@@ -366,6 +369,9 @@ function resolveCommand_(text) {
   }
   if (command === '/standings4') {
     return '/ตารางคะแนนชุด 4';
+  }
+  if (command === '/groups' || command === '/group' || command === 'groups' || command === 'group' || command === 'กลุ่ม' || command === 'เลือกกลุ่ม') {
+    return '/เมนูกลุ่ม';
   }
   if (command === '/groupstage' || command === 'group stage') {
     return '/โปรแกรมรอบแบ่งกลุ่ม';

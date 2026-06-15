@@ -107,9 +107,54 @@ function createStandingsMenuFlex() {
           createMessageButton_('Group A-C', '/standings1'),
           createMessageButton_('Group D-F', '/standings2'),
           createMessageButton_('Group G-I', '/standings3'),
-          createMessageButton_('Group J-L', '/standings4')
+          createMessageButton_('Group J-L', '/standings4'),
+          createMessageButton_('เลือกกลุ่มละเอียด', '/groups')
         ]
       }
+    }
+  };
+}
+
+function createGroupSelectMenuFlex() {
+  var groups = 'ABCDEFGHIJKL'.split('');
+  return {
+    type: 'flex',
+    altText: 'เลือกกลุ่มตารางคะแนน',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: createHeader_('เลือกกลุ่ม', '⚽ World Cup 2026'),
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          createText_('กดเลือก Group ที่ต้องการดูตารางคะแนนละเอียด', 'sm', FLEX_COLORS.gray, false, 'wrap')
+        ].concat(chunkArray_(groups, 4).map(function(row) {
+          return {
+            type: 'box',
+            layout: 'horizontal',
+            spacing: 'sm',
+            contents: row.map(function(groupName) {
+              return createGroupSelectButton_(groupName);
+            })
+          };
+        }))
+      }
+    }
+  };
+}
+
+function createGroupSelectButton_(groupName) {
+  return {
+    type: 'button',
+    flex: 1,
+    height: 'sm',
+    style: 'secondary',
+    action: {
+      type: 'message',
+      label: groupName,
+      text: '/' + groupName
     }
   };
 }
@@ -263,7 +308,7 @@ function createHelpFlex() {
     ['/standings2', 'Group D-F'],
     ['/standings3', 'Group G-I'],
     ['/standings4', 'Group J-L'],
-    ['/A', 'ตารางคะแนนละเอียดรายกลุ่ม (/A ถึง /L)'],
+    ['/groups', 'เมนูเลือกกลุ่มละเอียด A-L'],
     ['/knockout', 'เมนูรอบน็อกเอาต์'],
     ['/results', 'ผลบอลล่าสุด'],
     ['/allresults', 'ผลการแข่งขันทั้งหมด'],
