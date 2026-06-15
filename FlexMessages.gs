@@ -30,6 +30,37 @@ function createScheduleFlexMessages(matches) {
   });
 }
 
+function createScheduleMenuFlex() {
+  return {
+    type: 'flex',
+    altText: 'Schedule Menu',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: createHeader_('Schedule Menu', '⚽ World Cup 2026'),
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          createText_('เลือกโปรแกรมที่ต้องการดู', 'sm', FLEX_COLORS.gray, false, 'wrap')
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          createMessageButton_('Today', '/today'),
+          createMessageButton_('Tomorrow', '/tomorrow'),
+          createMessageButton_('Group Stage', '/groupstage'),
+          createMessageButton_('Knockout', '/knockout'),
+          createMessageButton_('Results', '/results')
+        ]
+      }
+    }
+  };
+}
+
 function createGroupScheduleFlexMessages(groupName, matches) {
   if (!matches || !matches.length) {
     return [createErrorFlex('ยังไม่มีข้อมูล Group ' + groupName + ' ในตอนนี้')];
@@ -50,23 +81,81 @@ function createStandingsCarouselFlex(standings) {
 }
 
 function createStandingsFlexMessages(standings) {
-  var groups = 'ABCDEFGHIJKL'.split('').filter(function(groupName) {
-    return (standings || {})[groupName];
-  });
-  if (!groups.length) {
-    return [createErrorFlex('ยังไม่มีข้อมูลในตอนนี้')];
+  return [createStandingsMenuFlex()];
+}
+
+function createStandingsMenuFlex() {
+  return {
+    type: 'flex',
+    altText: 'Standings Menu',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: createHeader_('Standings Menu', '⚽ World Cup 2026'),
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          createText_('เลือกช่วงกลุ่มที่ต้องการดูตารางคะแนน', 'sm', FLEX_COLORS.gray, false, 'wrap')
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          createMessageButton_('Group A-C', '/standings1'),
+          createMessageButton_('Group D-F', '/standings2'),
+          createMessageButton_('Group G-I', '/standings3'),
+          createMessageButton_('Group J-L', '/standings4')
+        ]
+      }
+    }
+  };
+}
+
+function createStandingsRangeFlexMessage(standings, rangeIndex) {
+  var ranges = [
+    ['A', 'B', 'C'],
+    ['D', 'E', 'F'],
+    ['G', 'H', 'I'],
+    ['J', 'K', 'L']
+  ];
+  var groups = ranges[Number(rangeIndex || 1) - 1] || ranges[0];
+  var message = createStandingsCarouselForGroups_(standings, groups, false);
+
+  console.log('Flex payload size KB:', getPayloadSizeKb(message));
+  if (getPayloadSizeKb(message) <= 45) {
+    return message;
   }
 
-  return [{
+  var compactMessage = createStandingsCarouselForGroups_(standings, groups, true);
+  console.log('Flex payload size KB compact:', getPayloadSizeKb(compactMessage));
+  if (getPayloadSizeKb(compactMessage) <= 45) {
+    return compactMessage;
+  }
+
+  return createStandingsTextFallback_(standings, groups, true);
+}
+
+function createStandingsCarouselForGroups_(standings, groups, compact) {
+  var availableGroups = groups.filter(function(groupName) {
+    return (standings || {})[groupName];
+  });
+  if (!availableGroups.length) {
+    return createErrorFlex('ยังไม่มีข้อมูลในตอนนี้');
+  }
+
+  return {
     type: 'flex',
-    altText: 'ตารางคะแนน World Cup 2026 Group A-L',
+    altText: 'ตารางคะแนน World Cup 2026 Group ' + groups.join('-'),
     contents: {
       type: 'carousel',
-      contents: groups.slice(0, 12).map(function(groupName) {
-        return createStandingBubble_(groupName, standings[groupName] || [], true);
+      contents: availableGroups.map(function(groupName) {
+        return createStandingBubble_(groupName, standings[groupName] || [], true, compact);
       })
     }
-  }];
+  };
 }
 
 function createGroupStandingFlex(groupName, teams) {
@@ -77,7 +166,7 @@ function createGroupStandingFlex(groupName, teams) {
   return {
     type: 'flex',
     altText: 'ตารางคะแนน Group ' + groupName,
-    contents: createStandingBubble_(groupName, teams, true)
+    contents: createStandingBubble_(groupName, teams, true, false)
   };
 }
 
@@ -129,14 +218,53 @@ function createAllResultsFlexMessages(results) {
   });
 }
 
+function createKnockoutStageFlexMessages(matches, title) {
+  if (!matches || !matches.length) {
+    return [createErrorFlex('ยังไม่มีข้อมูลรอบนี้ในตอนนี้')];
+  }
+
+  return chunkArray_(matches.slice(0, 18), 6).slice(0, 3).map(function(matchChunk, index) {
+    return createMatchesFlex_(
+      index === 0 ? title : title + ' ' + (index + 1),
+      matchChunk,
+      'Knockout'
+    );
+  });
+}
+
+function stageDisplayName_(stageName) {
+  var names = {
+    ROUND_OF_32: 'Round of 32',
+    ROUND_OF_16: 'Round of 16',
+    QUARTER_FINALS: 'Quarter-finals',
+    SEMI_FINALS: 'Semi-finals',
+    THIRD_PLACE: 'Third place',
+    FINAL: 'Final',
+    GROUP_STAGE: 'Group Stage'
+  };
+  return names[stageName] || stageName || 'Knockout';
+}
+
+function createTextMessage_(text) {
+  return {
+    type: 'text',
+    text: String(text || '')
+  };
+}
+
 function createHelpFlex() {
   var commands = [
     ['/today', 'โปรแกรมแข่งวันนี้'],
     ['/tomorrow', 'โปรแกรมแข่งพรุ่งนี้'],
-    ['/schedule', 'โปรแกรมแข่งทั้งหมด'],
+    ['/schedule', 'เมนูโปรแกรมแข่ง'],
     ['/schedule A', 'โปรแกรมเฉพาะกลุ่ม A'],
-    ['/standings', 'ตารางคะแนนทุกกลุ่ม'],
-    ['/A', 'ตารางคะแนนกลุ่ม A'],
+    ['/standings', 'เมนูตารางคะแนน'],
+    ['/standings1', 'Group A-C'],
+    ['/standings2', 'Group D-F'],
+    ['/standings3', 'Group G-I'],
+    ['/standings4', 'Group J-L'],
+    ['/A', 'ตารางคะแนนละเอียดรายกลุ่ม (/A ถึง /L)'],
+    ['/knockout', 'เมนูรอบน็อกเอาต์'],
     ['/results', 'ผลบอลล่าสุด'],
     ['/allresults', 'ผลการแข่งขันทั้งหมด'],
     ['/live', 'เปิดใช้ข้อมูลจริง'],
@@ -311,9 +439,9 @@ function createMatchesFlex_(title, matches, buttonLabel) {
   };
 }
 
-function createStandingBubble_(groupName, teams, includeFooter) {
+function createStandingBubble_(groupName, teams, includeFooter, compact) {
   var rows = teams.slice(0, 4).map(function(team) {
-    var line = createText_(createStandingLine_(team), 'xxs', '#111827', team.position === 1, 'wrap');
+    var line = createText_(createStandingLine_(team, compact), 'xxs', '#111827', team.position === 1, 'wrap');
     line.margin = 'sm';
     return line;
   });
@@ -337,7 +465,7 @@ function createStandingBubble_(groupName, teams, includeFooter) {
       spacing: 'sm',
       backgroundColor: '#F8FAFC',
       contents: [
-        createStandingHeader_()
+        createStandingHeader_(compact)
       ].concat(rows.length ? rows : [createText_('ยังไม่มีข้อมูลในตอนนี้', 'sm', FLEX_COLORS.gray, false)])
     }
   };
@@ -348,8 +476,7 @@ function createStandingBubble_(groupName, teams, includeFooter) {
       layout: 'vertical',
       spacing: 'sm',
       contents: [
-        createMessageButton_('ดูแมตช์ Group ' + groupName, '/schedule ' + groupName),
-        createMessageButton_('ตารางกลุ่มนี้', '/' + groupName)
+        createMessageButton_('Detail', '/' + groupName)
       ]
     };
   }
@@ -410,8 +537,8 @@ function createHeader_(title, subtitle) {
   };
 }
 
-function createStandingHeader_() {
-  return createText_('Team   P W D L GD Pt', 'xxs', FLEX_COLORS.gray, true, 'none');
+function createStandingHeader_(compact) {
+  return createText_(compact ? '# Team P W D L GD Pt' : '# Team P W D L GD GF GA Pt', 'xxs', FLEX_COLORS.gray, true, 'wrap');
 }
 
 function createText_(text, size, color, weight, wrap, flex) {
@@ -454,6 +581,38 @@ function createMessageButton_(label, text) {
       type: 'message',
       label: label,
       text: text
+    }
+  };
+}
+
+function createKnockoutMenuFlex() {
+  return {
+    type: 'flex',
+    altText: 'Knockout Menu',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: createHeader_('Knockout Menu', '⚽ World Cup 2026'),
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          createText_('เลือกรอบน็อกเอาต์ที่ต้องการดู', 'sm', FLEX_COLORS.gray, false, 'wrap')
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          createMessageButton_('Round of 32', '/round32'),
+          createMessageButton_('Round of 16', '/round16'),
+          createMessageButton_('Quarter-finals', '/quarter'),
+          createMessageButton_('Semi-finals', '/semi'),
+          createMessageButton_('Third place', '/third'),
+          createMessageButton_('Final', '/final')
+        ]
+      }
     }
   };
 }
@@ -513,17 +672,42 @@ function formatSignedNumber_(value) {
   return number > 0 ? '+' + number : String(number);
 }
 
-function createStandingLine_(team) {
-  return [
+function createStandingLine_(team, compact) {
+  var values = [
     String(team.position || '') + '.',
     team.team_name || '-',
     String(team.played || 0),
     String(team.won || 0),
     String(team.draw || 0),
     String(team.lost || 0),
-    formatSignedNumber_(team.goal_difference || 0),
-    String(team.points || 0)
-  ].join(' ');
+    formatSignedNumber_(team.goal_difference || 0)
+  ];
+  if (!compact) {
+    values.push(String(team.goals_for || 0));
+    values.push(String(team.goals_against || 0));
+  }
+  values.push(String(team.points || 0));
+  return values.join(' ');
+}
+
+function createStandingsTextFallback_(standings, groups, compact) {
+  var lines = ['ตารางคะแนน World Cup 2026'];
+  groups.forEach(function(groupName) {
+    lines.push('');
+    lines.push('Group ' + groupName);
+    lines.push(compact ? '# Team P W D L GD Pt' : '# Team P W D L GD GF GA Pt');
+    ((standings || {})[groupName] || []).slice(0, 4).forEach(function(team) {
+      lines.push(createStandingLine_(team, compact));
+    });
+  });
+  return {
+    type: 'text',
+    text: lines.join('\n')
+  };
+}
+
+function getPayloadSizeKb(obj) {
+  return Utilities.newBlob(JSON.stringify(obj)).getBytes().length / 1024;
 }
 
 function translateStatus_(status) {

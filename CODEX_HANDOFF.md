@@ -140,8 +140,11 @@ Thai legacy aliases are still supported for convenience.
 - Quick reply buttons are attached to the last outgoing message.
 - `/results` should show only the latest 4 matches.
 - `/allresults` shows all cached finished matches in chunks.
-- `/standings` is one carousel with 12 bubbles, Group A through Group L.
-- Each standings bubble has small buttons for group matches and the single-group table.
+- `/standings` is a menu for standings ranges.
+- `/standings1` through `/standings4` show Group A-C, D-F, G-I, and J-L as smaller carousels.
+- `/A` through `/L` show one detailed group table.
+- `/knockout` is a menu for knockout stages.
+- `/round32`, `/round16`, `/quarter`, `/semi`, `/third`, and `/final` filter matches by normalized stage.
 - `cache` sheet stores sync metadata such as match/standing counts and last sync time.
 
 ## Validation Commands

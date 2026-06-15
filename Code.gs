@@ -109,13 +109,23 @@ function handleTextCommand(replyToken, userMessage) {
     } else if (command.indexOf('/โปรแกรมกลุ่ม ') === 0) {
       var scheduleGroupName = command.replace('/โปรแกรมกลุ่ม ', '').trim().toUpperCase();
       messages = createGroupScheduleFlexMessages(scheduleGroupName, fetchGroupMatches(scheduleGroupName));
+    } else if (command === '/โปรแกรมรอบแบ่งกลุ่ม') {
+      messages = createScheduleFlexMessages(fetchGroupStageMatches());
     } else if (command === '/โปรแกรม') {
-      messages = createScheduleFlexMessages(fetchAllMatches());
+      messages = [createScheduleMenuFlex()];
     } else if (command === '/ตารางคะแนน') {
       messages = createStandingsFlexMessages(fetchStandings());
+    } else if (command.indexOf('/ตารางคะแนนชุด ') === 0) {
+      var standingRange = Number(command.replace('/ตารางคะแนนชุด ', '').trim());
+      messages = [createStandingsRangeFlexMessage(fetchStandings(), standingRange)];
     } else if (command.indexOf('/กลุ่ม ') === 0) {
       var groupName = command.replace('/กลุ่ม ', '').trim().toUpperCase();
       messages = [createGroupStandingFlex(groupName, getGroupStandingData(groupName))];
+    } else if (command === '/knockout') {
+      messages = [createKnockoutMenuFlex()];
+    } else if (command.indexOf('/รอบ ') === 0) {
+      var stageName = command.replace('/รอบ ', '').trim();
+      messages = createKnockoutStageFlexMessages(fetchMatchesByStage(stageName), stageDisplayName_(stageName));
     } else if (command === '/ผลการแข่งขัน') {
       messages = createAllResultsFlexMessages(fetchAllResults());
     } else if (command === '/ผลบอล') {
@@ -159,7 +169,7 @@ function replyMessage(replyToken, messages) {
 
     var payload = {
       replyToken: replyToken,
-      messages: attachGlobalQuickReply_(messages)
+      messages: attachGlobalQuickReply_(logOutgoingPayloadSizes_(messages))
     };
 
     return callLineApi(LINE_REPLY_ENDPOINT, token, payload);
@@ -180,6 +190,11 @@ function attachGlobalQuickReply_(messages) {
       createQuickReplyItem_('/tomorrow', 'Tomorrow'),
       createQuickReplyItem_('/schedule', 'Schedule'),
       createQuickReplyItem_('/standings', 'Standings'),
+      createQuickReplyItem_('/standings1', 'A-C'),
+      createQuickReplyItem_('/standings2', 'D-F'),
+      createQuickReplyItem_('/standings3', 'G-I'),
+      createQuickReplyItem_('/standings4', 'J-L'),
+      createQuickReplyItem_('/knockout', 'Knockout'),
       createQuickReplyItem_('/results', 'Results'),
       createQuickReplyItem_('/allresults', 'All Results'),
       createQuickReplyItem_('/help', 'Menu')
@@ -187,6 +202,19 @@ function attachGlobalQuickReply_(messages) {
   };
 
   messages[messages.length - 1].quickReply = quickReply;
+  return messages;
+}
+
+function logOutgoingPayloadSizes_(messages) {
+  (messages || []).forEach(function(message) {
+    if (message && message.type === 'flex') {
+      try {
+        console.log('Flex payload size KB:', getPayloadSizeKb(message));
+      } catch (error) {
+        console.log('Flex payload size check failed:', error && error.message);
+      }
+    }
+  });
   return messages;
 }
 
@@ -326,6 +354,42 @@ function resolveCommand_(text) {
   }
   if (command === '/standings') {
     return '/ตารางคะแนน';
+  }
+  if (command === '/standings1') {
+    return '/ตารางคะแนนชุด 1';
+  }
+  if (command === '/standings2') {
+    return '/ตารางคะแนนชุด 2';
+  }
+  if (command === '/standings3') {
+    return '/ตารางคะแนนชุด 3';
+  }
+  if (command === '/standings4') {
+    return '/ตารางคะแนนชุด 4';
+  }
+  if (command === '/groupstage' || command === 'group stage') {
+    return '/โปรแกรมรอบแบ่งกลุ่ม';
+  }
+  if (command === '/knockout' || command === 'knockout') {
+    return '/knockout';
+  }
+  if (command === '/round32') {
+    return '/รอบ ROUND_OF_32';
+  }
+  if (command === '/round16') {
+    return '/รอบ ROUND_OF_16';
+  }
+  if (command === '/quarter') {
+    return '/รอบ QUARTER_FINALS';
+  }
+  if (command === '/semi') {
+    return '/รอบ SEMI_FINALS';
+  }
+  if (command === '/third') {
+    return '/รอบ THIRD_PLACE';
+  }
+  if (command === '/final') {
+    return '/รอบ FINAL';
   }
   if (command === '/results' || command === '/ผลบอล' || command === 'ผลบอล' || command === 'ผล' || command === 'บอล' || command === 'results') {
     return '/ผลบอล';

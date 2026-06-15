@@ -13,6 +13,7 @@ var SHEET_HEADERS = {
     'match_time_th',
     'status',
     'venue',
+    'normalized_stage',
     'updated_at'
   ],
   standings: [
@@ -81,6 +82,13 @@ function getGroupMatchesFromSheet(groupName) {
   var normalizedGroup = String(groupName || '').trim().toUpperCase();
   return getAllMatchesFromSheet().filter(function(match) {
     return String(match.group_name || '').trim().toUpperCase() === normalizedGroup;
+  });
+}
+
+function getMatchesByStageFromSheet(stageName) {
+  var normalizedStage = normalizeStage(stageName);
+  return getAllMatchesFromSheet().filter(function(match) {
+    return normalizeStage(match.normalized_stage || match.stage) === normalizedStage;
   });
 }
 

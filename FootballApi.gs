@@ -62,6 +62,27 @@ function fetchGroupMatches(groupName) {
   }
 }
 
+function fetchGroupStageMatches() {
+  return fetchMatchesByStage('GROUP_STAGE');
+}
+
+function fetchMatchesByStage(stageName) {
+  try {
+    var normalizedStage = normalizeStage(stageName);
+    if (isMockMode()) {
+      return getMockAllMatches().filter(function(match) {
+        return normalizeStage(match.normalized_stage || match.stage || match.group_name) === normalizedStage;
+      });
+    }
+
+    ensureLiveDataReady_();
+    return getMatchesByStageFromSheet(normalizedStage);
+  } catch (error) {
+    writeLog('ERROR', 'fetchMatchesByStage failed', serializeError(error));
+    throw error;
+  }
+}
+
 function fetchStandings() {
   try {
     if (isMockMode()) {
@@ -209,6 +230,11 @@ function ensureLiveDataReady_() {
 function normalizeFootballMatches_(apiMatches) {
   return apiMatches.map(function(match) {
     var utcDate = match.utcDate ? new Date(match.utcDate) : '';
+    var rawStage = match.stage || match.group || '';
+    var normalizedStage = normalizeStage(rawStage);
+    if (normalizedStage === 'UNKNOWN') {
+      writeLog('WARN', 'Unknown football-data.org stage', { stage: rawStage, matchId: match.id || '' });
+    }
     return {
       match_id: match.id || '',
       competition: match.competition && match.competition.name || 'FIFA World Cup',
@@ -222,6 +248,7 @@ function normalizeFootballMatches_(apiMatches) {
       match_time_th: utcDate ? formatThaiDateTime_(utcDate) : '',
       status: match.status || '',
       venue: match.venue || '',
+      normalized_stage: normalizedStage,
       updated_at: new Date()
     };
   });
@@ -255,6 +282,20 @@ function extractGroupName_(value) {
   var text = String(value || '').toUpperCase();
   var match = text.match(/[A-L]$/);
   return match ? match[0] : text.replace('GROUP_', '').replace('GROUP ', '').trim();
+}
+
+function normalizeStage(stage) {
+  var s = String(stage || '').toUpperCase();
+
+  if (s.indexOf('GROUP') >= 0 || /^[A-L]$/.test(s)) return 'GROUP_STAGE';
+  if (s.indexOf('32') >= 0) return 'ROUND_OF_32';
+  if (s.indexOf('16') >= 0 || s.indexOf('LAST_16') >= 0) return 'ROUND_OF_16';
+  if (s.indexOf('QUARTER') >= 0) return 'QUARTER_FINALS';
+  if (s.indexOf('SEMI') >= 0) return 'SEMI_FINALS';
+  if (s.indexOf('THIRD') >= 0) return 'THIRD_PLACE';
+  if (s.indexOf('FINAL') >= 0) return 'FINAL';
+
+  return 'UNKNOWN';
 }
 
 function formatThaiDateTime_(date) {

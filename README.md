@@ -120,8 +120,19 @@ X-Auth-Token: FOOTBALL_DATA_API_KEY
 - `/พรุ่งนี้`
 - `/schedule A`
 - `/ตารางคะแนน`
+- `/standings1`
+- `/standings2`
+- `/standings3`
+- `/standings4`
 - `/กลุ่ม A`
 - `/กลุ่ม B`
+- `/knockout`
+- `/round32`
+- `/round16`
+- `/quarter`
+- `/semi`
+- `/third`
+- `/final`
 - `/ผลบอล`
 - `/help`
 
