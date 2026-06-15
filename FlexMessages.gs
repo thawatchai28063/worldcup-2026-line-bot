@@ -441,9 +441,7 @@ function createMatchesFlex_(title, matches, buttonLabel) {
 
 function createStandingBubble_(groupName, teams, includeFooter, compact) {
   var rows = teams.slice(0, 4).map(function(team) {
-    var line = createText_(createStandingLine_(team, compact), 'xxs', '#111827', team.position === 1, 'wrap');
-    line.margin = 'sm';
-    return line;
+    return createStandingRow_(team, compact);
   });
 
   var bubble = {
@@ -538,7 +536,12 @@ function createHeader_(title, subtitle) {
 }
 
 function createStandingHeader_(compact) {
-  return createText_(compact ? '# Team P W D L GD Pt' : '# Team P W D L GD GF GA Pt', 'xxs', FLEX_COLORS.gray, true, 'wrap');
+  return createStandingTableRow_(
+    compact ? ['#', 'Team', 'P', 'W', 'D', 'L', 'GD', 'Pt'] : ['#', 'Team', 'P', 'W', 'D', 'L', 'GD', 'GF', 'GA', 'Pt'],
+    true,
+    FLEX_COLORS.gray,
+    false
+  );
 }
 
 function createText_(text, size, color, weight, wrap, flex) {
@@ -688,6 +691,60 @@ function createStandingLine_(team, compact) {
   }
   values.push(String(team.points || 0));
   return values.join(' ');
+}
+
+function createStandingRow_(team, compact) {
+  var values = [
+    String(team.position || ''),
+    team.team_name || '-',
+    String(team.played || 0),
+    String(team.won || 0),
+    String(team.draw || 0),
+    String(team.lost || 0),
+    formatSignedNumber_(team.goal_difference || 0)
+  ];
+  if (!compact) {
+    values.push(String(team.goals_for || 0));
+    values.push(String(team.goals_against || 0));
+  }
+  values.push(String(team.points || 0));
+
+  return createStandingTableRow_(values, Boolean(team.position === 1), '#111827', true);
+}
+
+function createStandingTableRow_(values, bold, color, bodyRow) {
+  var cells = values.map(function(value, index) {
+    var isTeam = index === 1;
+    var cell = createText_(
+      value,
+      'xxs',
+      color || '#111827',
+      bold,
+      isTeam ? 'wrap' : 'none',
+      standingCellFlex_(index, values.length)
+    );
+    if (!isTeam) {
+      cell.align = index === 0 ? 'start' : 'end';
+    }
+    return cell;
+  });
+
+  return {
+    type: 'box',
+    layout: 'horizontal',
+    spacing: 'xxs',
+    paddingAll: bodyRow ? '5px' : '0px',
+    cornerRadius: bodyRow ? '6px' : 'none',
+    backgroundColor: bodyRow && bold ? '#EEF6FF' : FLEX_COLORS.white,
+    contents: cells
+  };
+}
+
+function standingCellFlex_(index, length) {
+  if (index === 0) return 1;
+  if (index === 1) return length >= 10 ? 8 : 9;
+  if (length >= 10 && (index === 6 || index === 7 || index === 8)) return 2;
+  return 1;
 }
 
 function createStandingsTextFallback_(standings, groups, compact) {
