@@ -158,7 +158,6 @@ function appendCommandMenuAfterResponse_(messages) {
   if (safeMessages.length >= 5) {
     safeMessages = safeMessages.slice(0, 4);
   }
-  safeMessages.push(createCompactCommandMenuFlex());
   return safeMessages;
 }
 
@@ -257,26 +256,39 @@ function pushMessage(to, messages) {
 
 function getConfig(key) {
   try {
-    var sheet = getSheetByName_('settings');
-    if (!sheet) {
-      return '';
-    }
-
-    var values = sheet.getDataRange().getValues();
-    for (var i = 1; i < values.length; i++) {
-      if (String(values[i][0]).trim() === key) {
-        return String(values[i][1] || '').trim();
-      }
-    }
-    return '';
+    return getConfigMap_()[key] || '';
   } catch (error) {
     writeLog('ERROR', 'getConfig failed for ' + key, serializeError(error));
     return '';
   }
 }
 
+function getConfigMap_() {
+  if (CONFIG_CACHE_) {
+    return CONFIG_CACHE_;
+  }
+
+  CONFIG_CACHE_ = {};
+  var sheet = getSheetByName_('settings');
+  if (!sheet || sheet.getLastRow() < 2) {
+    return CONFIG_CACHE_;
+  }
+
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    var key = String(values[i][0] || '').trim();
+    if (key) {
+      CONFIG_CACHE_[key] = String(values[i][1] || '').trim();
+    }
+  }
+  return CONFIG_CACHE_;
+}
+
 function writeLog(type, message, data) {
   try {
+    if (type === 'INFO') {
+      return;
+    }
     appendLog([
       new Date(),
       type,

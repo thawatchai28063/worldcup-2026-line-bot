@@ -217,14 +217,22 @@ function isMockMode() {
 }
 
 function ensureLiveDataReady_() {
-  var hasMatches = getAllMatchesFromSheet().length > 0;
-  var hasStandings = Object.keys(getStandingsFromSheet()).length > 0;
+  var hasMatches = hasCachedOrSheetData_('matches_count', 'matches');
+  var hasStandings = hasCachedOrSheetData_('standings_count', 'standings');
   if (!hasMatches) {
     syncMatchesToSheet();
   }
   if (!hasStandings) {
     syncStandingsToSheet();
   }
+}
+
+function hasCachedOrSheetData_(cacheKey, sheetName) {
+  var cachedCount = Number(getCacheValue_(cacheKey) || 0);
+  if (cachedCount > 0) {
+    return true;
+  }
+  return hasSheetData_(sheetName);
 }
 
 function normalizeFootballMatches_(apiMatches) {

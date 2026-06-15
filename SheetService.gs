@@ -44,6 +44,10 @@ var DEFAULT_SETTINGS = [
   ['TIMEZONE', 'Asia/Bangkok']
 ];
 
+var SPREADSHEET_CACHE_ = null;
+var CONFIG_CACHE_ = null;
+var OBJECT_CACHE_ = {};
+
 function setupSheets() {
   try {
     Object.keys(SHEET_HEADERS).forEach(function(sheetName) {
@@ -124,6 +128,8 @@ function saveMatches(matches) {
   clearDataRows_(sheet);
 
   if (!matches || !matches.length) {
+    OBJECT_CACHE_.matches = null;
+    removeObjectCache_('matches');
     setCacheValue_('matches_count', 0);
     setCacheValue_('matches_last_sync', new Date());
     return;
@@ -135,6 +141,8 @@ function saveMatches(matches) {
     });
   });
   sheet.getRange(2, 1, rows.length, SHEET_HEADERS.matches.length).setValues(rows);
+  OBJECT_CACHE_.matches = null;
+  removeObjectCache_('matches');
   setCacheValue_('matches_count', matches.length);
   setCacheValue_('matches_last_sync', new Date());
 }
@@ -146,6 +154,8 @@ function saveStandings(standings) {
 
   var rows = Array.isArray(standings) ? standings : flattenStandings_(standings);
   if (!rows.length) {
+    OBJECT_CACHE_.standings = null;
+    removeObjectCache_('standings');
     setCacheValue_('standings_count', 0);
     setCacheValue_('standings_last_sync', new Date());
     return;
@@ -157,6 +167,8 @@ function saveStandings(standings) {
     });
   });
   sheet.getRange(2, 1, values.length, SHEET_HEADERS.standings.length).setValues(values);
+  OBJECT_CACHE_.standings = null;
+  removeObjectCache_('standings');
   setCacheValue_('standings_count', rows.length);
   setCacheValue_('standings_last_sync', new Date());
 }
@@ -175,11 +187,13 @@ function setConfig(key, value) {
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim() === key) {
       sheet.getRange(i + 1, 2).setValue(value);
+      CONFIG_CACHE_ = null;
       return;
     }
   }
 
   sheet.appendRow([key, value]);
+  CONFIG_CACHE_ = null;
 }
 
 function setCacheValue_(key, value) {
@@ -191,23 +205,22 @@ function setCacheValue_(key, value) {
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim() === key) {
       sheet.getRange(i + 1, 2, 1, 2).setValues([[value, now]]);
+      OBJECT_CACHE_.cache = null;
+      removeObjectCache_('cache');
       return;
     }
   }
 
   sheet.appendRow([key, value, now]);
+  OBJECT_CACHE_.cache = null;
+  removeObjectCache_('cache');
 }
 
 function getCacheValue_(key) {
-  var sheet = getSheetByName_('cache');
-  if (!sheet || sheet.getLastRow() < 2) {
-    return '';
-  }
-
-  var values = sheet.getDataRange().getValues();
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][0]).trim() === key) {
-      return values[i][1];
+  var rows = readObjects_('cache');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].key || '').trim() === key) {
+      return rows[i].value;
     }
   }
   return '';
@@ -223,21 +236,28 @@ function getOrCreateSheet_(sheetName) {
 }
 
 function getSpreadsheet_() {
+  if (SPREADSHEET_CACHE_) {
+    return SPREADSHEET_CACHE_;
+  }
+
   var properties = PropertiesService.getScriptProperties();
   var spreadsheetId = properties.getProperty('SPREADSHEET_ID');
   if (spreadsheetId) {
-    return SpreadsheetApp.openById(spreadsheetId);
+    SPREADSHEET_CACHE_ = SpreadsheetApp.openById(spreadsheetId);
+    return SPREADSHEET_CACHE_;
   }
 
   var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   if (activeSpreadsheet) {
     properties.setProperty('SPREADSHEET_ID', activeSpreadsheet.getId());
-    return activeSpreadsheet;
+    SPREADSHEET_CACHE_ = activeSpreadsheet;
+    return SPREADSHEET_CACHE_;
   }
 
   var createdSpreadsheet = SpreadsheetApp.create('World Cup 2026 Bot Data');
   properties.setProperty('SPREADSHEET_ID', createdSpreadsheet.getId());
-  return createdSpreadsheet;
+  SPREADSHEET_CACHE_ = createdSpreadsheet;
+  return SPREADSHEET_CACHE_;
 }
 
 function ensureHeader_(sheet, headers) {
@@ -256,6 +276,16 @@ function clearDataRows_(sheet) {
 }
 
 function readObjects_(sheetName) {
+  if (OBJECT_CACHE_[sheetName]) {
+    return OBJECT_CACHE_[sheetName];
+  }
+
+  var cachedObjects = getCachedObjects_(sheetName);
+  if (cachedObjects) {
+    OBJECT_CACHE_[sheetName] = cachedObjects;
+    return cachedObjects;
+  }
+
   var sheet = getSheetByName_(sheetName);
   if (!sheet || sheet.getLastRow() < 2) {
     return [];
@@ -263,7 +293,7 @@ function readObjects_(sheetName) {
 
   var values = sheet.getDataRange().getValues();
   var headers = values[0];
-  return values.slice(1).filter(function(row) {
+  var objects = values.slice(1).filter(function(row) {
     return row.join('') !== '';
   }).map(function(row) {
     return headers.reduce(function(object, header, index) {
@@ -271,6 +301,50 @@ function readObjects_(sheetName) {
       return object;
     }, {});
   });
+  OBJECT_CACHE_[sheetName] = objects;
+  setCachedObjects_(sheetName, objects);
+  return objects;
+}
+
+function getCachedObjects_(sheetName) {
+  if (sheetName === 'logs') {
+    return null;
+  }
+
+  try {
+    var text = CacheService.getScriptCache().get('objects_' + sheetName);
+    return text ? JSON.parse(text) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function setCachedObjects_(sheetName, objects) {
+  if (sheetName === 'logs') {
+    return;
+  }
+
+  try {
+    var text = JSON.stringify(objects || []);
+    if (text.length < 90000) {
+      CacheService.getScriptCache().put('objects_' + sheetName, text, 300);
+    }
+  } catch (error) {
+    // Cache is best-effort only.
+  }
+}
+
+function removeObjectCache_(sheetName) {
+  try {
+    CacheService.getScriptCache().remove('objects_' + sheetName);
+  } catch (error) {
+    // Cache is best-effort only.
+  }
+}
+
+function hasSheetData_(sheetName) {
+  var sheet = getSheetByName_(sheetName);
+  return Boolean(sheet && sheet.getLastRow() > 1);
 }
 
 function filterMatchesByDate_(date) {
