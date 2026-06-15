@@ -106,6 +106,9 @@ function handleTextCommand(replyToken, userMessage) {
       messages = [createTodayMatchesFlex(fetchTodayMatches())];
     } else if (command === '/พรุ่งนี้') {
       messages = [createTomorrowMatchesFlex(fetchTomorrowMatches())];
+    } else if (command.indexOf('/โปรแกรมกลุ่ม ') === 0) {
+      var scheduleGroupName = command.replace('/โปรแกรมกลุ่ม ', '').trim().toUpperCase();
+      messages = createGroupScheduleFlexMessages(scheduleGroupName, fetchGroupMatches(scheduleGroupName));
     } else if (command === '/โปรแกรม') {
       messages = createScheduleFlexMessages(fetchAllMatches());
     } else if (command === '/ตารางคะแนน') {
@@ -312,6 +315,11 @@ function resolveCommand_(text) {
     command === 'all'
   ) {
     return '/โปรแกรม';
+  }
+
+  var scheduleGroupMatch = compact.match(/^\/?schedule([a-l])$/i) || compact.match(/^\/?matches([a-l])$/i) || compact.match(/^\/?โปรแกรมกลุ่ม([a-l])$/i);
+  if (scheduleGroupMatch) {
+    return '/โปรแกรมกลุ่ม ' + scheduleGroupMatch[1].toUpperCase();
   }
   if (command === '/ตารางคะแนน' || command === 'ตารางคะแนน' || command === 'ตาราง' || command === 'คะแนน' || command === '/ตารางคะแนนทุกกลุ่ม' || command === 'ตารางคะแนนทุกกลุ่ม') {
     return '/ตารางคะแนน';

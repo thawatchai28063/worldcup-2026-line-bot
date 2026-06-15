@@ -45,6 +45,23 @@ function fetchAllMatches() {
   }
 }
 
+function fetchGroupMatches(groupName) {
+  try {
+    var normalizedGroup = String(groupName || '').trim().toUpperCase();
+    if (isMockMode()) {
+      return getMockAllMatches().filter(function(match) {
+        return String(match.group_name || '').trim().toUpperCase() === normalizedGroup;
+      });
+    }
+
+    ensureLiveDataReady_();
+    return getGroupMatchesFromSheet(normalizedGroup);
+  } catch (error) {
+    writeLog('ERROR', 'fetchGroupMatches failed', serializeError(error));
+    throw error;
+  }
+}
+
 function fetchStandings() {
   try {
     if (isMockMode()) {

@@ -118,6 +118,7 @@ X-Auth-Token: FOOTBALL_DATA_API_KEY
 
 - `/วันนี้`
 - `/พรุ่งนี้`
+- `/schedule A`
 - `/ตารางคะแนน`
 - `/กลุ่ม A`
 - `/กลุ่ม B`

@@ -30,29 +30,43 @@ function createScheduleFlexMessages(matches) {
   });
 }
 
+function createGroupScheduleFlexMessages(groupName, matches) {
+  if (!matches || !matches.length) {
+    return [createErrorFlex('ยังไม่มีข้อมูล Group ' + groupName + ' ในตอนนี้')];
+  }
+
+  return chunkArray_(matches.slice(0, 12), 6).slice(0, 2).map(function(matchChunk, index) {
+    return createMatchesFlex_(
+      index === 0 ? 'โปรแกรม Group ' + groupName : 'โปรแกรม Group ' + groupName + ' ' + (index + 1),
+      matchChunk,
+      'ตารางคะแนน'
+    );
+  });
+}
+
 function createStandingsCarouselFlex(standings) {
   var messages = createStandingsFlexMessages(standings);
   return messages[0] || createErrorFlex('ยังไม่มีข้อมูลในตอนนี้');
 }
 
 function createStandingsFlexMessages(standings) {
-  var groups = Object.keys(standings || {}).sort().slice(0, 12);
+  var groups = 'ABCDEFGHIJKL'.split('').filter(function(groupName) {
+    return (standings || {})[groupName];
+  });
   if (!groups.length) {
     return [createErrorFlex('ยังไม่มีข้อมูลในตอนนี้')];
   }
 
-  return chunkArray_(groups, 6).map(function(groupChunk, index) {
-    return {
-      type: 'flex',
-      altText: index === 0 ? 'ตารางคะแนน World Cup 2026 A-F' : 'ตารางคะแนน World Cup 2026 G-L',
-      contents: {
-        type: 'carousel',
-        contents: groupChunk.map(function(groupName) {
-          return createStandingBubble_(groupName, standings[groupName] || [], false);
-        })
-      }
-    };
-  });
+  return [{
+    type: 'flex',
+    altText: 'ตารางคะแนน World Cup 2026 Group A-L',
+    contents: {
+      type: 'carousel',
+      contents: groups.slice(0, 12).map(function(groupName) {
+        return createStandingBubble_(groupName, standings[groupName] || [], true);
+      })
+    }
+  }];
 }
 
 function createGroupStandingFlex(groupName, teams) {
@@ -120,6 +134,7 @@ function createHelpFlex() {
     ['/today', 'โปรแกรมแข่งวันนี้'],
     ['/tomorrow', 'โปรแกรมแข่งพรุ่งนี้'],
     ['/schedule', 'โปรแกรมแข่งทั้งหมด'],
+    ['/schedule A', 'โปรแกรมเฉพาะกลุ่ม A'],
     ['/standings', 'ตารางคะแนนทุกกลุ่ม'],
     ['/A', 'ตารางคะแนนกลุ่ม A'],
     ['/results', 'ผลบอลล่าสุด'],
@@ -298,21 +313,9 @@ function createMatchesFlex_(title, matches, buttonLabel) {
 
 function createStandingBubble_(groupName, teams, includeFooter) {
   var rows = teams.slice(0, 4).map(function(team) {
-    return {
-      type: 'box',
-      layout: 'horizontal',
-      spacing: 'xs',
-      paddingAll: '6px',
-      cornerRadius: '6px',
-      backgroundColor: team.position === 1 ? '#EEF6FF' : FLEX_COLORS.white,
-      contents: [
-        createText_(String(team.position || ''), 'xs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(team.team_name || '-', 'xs', '#111827', true, 'wrap', 7),
-        createText_(String(team.played || 0), 'xs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.goal_difference || 0), 'xs', FLEX_COLORS.gray, false, 'none', 1),
-        createText_(String(team.points || 0), 'xs', FLEX_COLORS.navy, true, 'none', 1)
-      ]
-    };
+    var line = createText_(createStandingLine_(team), 'xxs', '#111827', team.position === 1, 'wrap');
+    line.margin = 'sm';
+    return line;
   });
 
   var bubble = {
@@ -344,7 +347,10 @@ function createStandingBubble_(groupName, teams, includeFooter) {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
-      contents: createFooterButtons_()
+      contents: [
+        createMessageButton_('ดูแมตช์ Group ' + groupName, '/schedule ' + groupName),
+        createMessageButton_('ตารางกลุ่มนี้', '/' + groupName)
+      ]
     };
   }
 
@@ -405,18 +411,7 @@ function createHeader_(title, subtitle) {
 }
 
 function createStandingHeader_() {
-  return {
-    type: 'box',
-    layout: 'horizontal',
-    spacing: 'xs',
-    contents: [
-      createText_('#', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('ทีม', 'xxs', FLEX_COLORS.gray, true, 'none', 7),
-      createText_('แข่ง', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('+/-', 'xxs', FLEX_COLORS.gray, true, 'none', 1),
-      createText_('แต้ม', 'xxs', FLEX_COLORS.gray, true, 'none', 1)
-    ]
-  };
+  return createText_('Team   P W D L GD Pt', 'xxs', FLEX_COLORS.gray, true, 'none');
 }
 
 function createText_(text, size, color, weight, wrap, flex) {
@@ -453,6 +448,7 @@ function createUriButton_(label, uri) {
 function createMessageButton_(label, text) {
   return {
     type: 'button',
+    height: 'sm',
     style: 'secondary',
     action: {
       type: 'message',
@@ -510,6 +506,24 @@ function thaiMonth_(month) {
 
 function normalizeDisplayScore_(score) {
   return score === '' || score === null || score === undefined ? '-' : String(score);
+}
+
+function formatSignedNumber_(value) {
+  var number = Number(value || 0);
+  return number > 0 ? '+' + number : String(number);
+}
+
+function createStandingLine_(team) {
+  return [
+    String(team.position || '') + '.',
+    team.team_name || '-',
+    String(team.played || 0),
+    String(team.won || 0),
+    String(team.draw || 0),
+    String(team.lost || 0),
+    formatSignedNumber_(team.goal_difference || 0),
+    String(team.points || 0)
+  ].join(' ');
 }
 
 function translateStatus_(status) {

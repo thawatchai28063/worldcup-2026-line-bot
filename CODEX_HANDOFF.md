@@ -123,6 +123,7 @@ English commands are the main UX:
 - `/today`
 - `/tomorrow`
 - `/schedule`
+- `/schedule A` through `/schedule L`
 - `/standings`
 - `/A` through `/L`
 - `/results`
@@ -139,7 +140,8 @@ Thai legacy aliases are still supported for convenience.
 - Quick reply buttons are attached to the last outgoing message.
 - `/results` should show only the latest 4 matches.
 - `/allresults` shows all cached finished matches in chunks.
-- `/standings` is split into carousel batches to stay under LINE Flex size limits.
+- `/standings` is one carousel with 12 bubbles, Group A through Group L.
+- Each standings bubble has small buttons for group matches and the single-group table.
 - `cache` sheet stores sync metadata such as match/standing counts and last sync time.
 
 ## Validation Commands

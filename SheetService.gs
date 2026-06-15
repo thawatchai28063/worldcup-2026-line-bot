@@ -77,6 +77,13 @@ function getAllMatchesFromSheet() {
   });
 }
 
+function getGroupMatchesFromSheet(groupName) {
+  var normalizedGroup = String(groupName || '').trim().toUpperCase();
+  return getAllMatchesFromSheet().filter(function(match) {
+    return String(match.group_name || '').trim().toUpperCase() === normalizedGroup;
+  });
+}
+
 function getStandingsFromSheet() {
   var rows = readObjects_('standings');
   return rows.reduce(function(groups, row) {
