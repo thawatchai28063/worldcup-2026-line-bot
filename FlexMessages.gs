@@ -692,18 +692,25 @@ function formatDisplayDate_(value) {
     return '-';
   }
 
+  var raw = String(value);
+  var plainMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (plainMatch) {
+    var display = Number(plainMatch[3]) + ' ' + thaiMonth_(Number(plainMatch[2])) + ' ' + plainMatch[1];
+    if (plainMatch[4] && plainMatch[5]) {
+      display += ' · ' + plainMatch[4] + ':' + plainMatch[5] + ' น.';
+    }
+    return display;
+  }
+
   var parsed = value instanceof Date ? value : new Date(value);
   if (isNaN(parsed.getTime())) {
-    var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      return Number(match[3]) + ' ' + thaiMonth_(Number(match[2])) + ' ' + match[1];
-    }
-    return String(value);
+    return raw;
   }
 
   return Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'd') + ' ' +
     thaiMonth_(Number(Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'M'))) + ' ' +
-    Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'yyyy');
+    Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'yyyy') + ' · ' +
+    Utilities.formatDate(parsed, getConfiguredTimeZone_(), 'HH:mm') + ' น.';
 }
 
 function thaiMonth_(month) {
