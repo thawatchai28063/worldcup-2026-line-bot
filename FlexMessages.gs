@@ -211,7 +211,7 @@ function createGroupStandingFlex(groupName, teams) {
   return {
     type: 'flex',
     altText: 'ตารางคะแนน Group ' + groupName,
-    contents: createStandingBubble_(groupName, teams, true, false)
+    contents: createStandingBubble_(groupName, teams, false, false)
   };
 }
 
@@ -781,15 +781,18 @@ function createStandingTableRow_(values, bold, color, bodyRow) {
     return cell;
   });
 
-  return {
+  var row = {
     type: 'box',
     layout: 'horizontal',
     spacing: 'xxs',
-    paddingAll: bodyRow ? '5px' : '0px',
-    cornerRadius: bodyRow ? '6px' : 'none',
-    backgroundColor: bodyRow && bold ? '#EEF6FF' : FLEX_COLORS.white,
     contents: cells
   };
+  if (bodyRow) {
+    row.paddingAll = '5px';
+    row.cornerRadius = '6px';
+    row.backgroundColor = bold ? '#EEF6FF' : FLEX_COLORS.white;
+  }
+  return row;
 }
 
 function standingCellFlex_(index, length) {
