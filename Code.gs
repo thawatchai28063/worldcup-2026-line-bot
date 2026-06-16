@@ -246,7 +246,7 @@ function isCacheableCommand_(command) {
 function buildCommandCacheKey_(command) {
   var version = 'static';
   if (command === '/ตารางคะแนน' || command.indexOf('/ตารางคะแนนชุด ') === 0 || command === '/เมนูกลุ่ม' || command.indexOf('/กลุ่ม ') === 0) {
-    version = String(getCacheValue_('standings_last_sync') || 'standings');
+    version = normalizeCacheVersion_(getCacheValue_('standings_last_sync') || 'standings');
   } else if (
     command === '/วันนี้' ||
     command === '/พรุ่งนี้' ||
@@ -258,9 +258,45 @@ function buildCommandCacheKey_(command) {
     command.indexOf('/รอบ ') === 0 ||
     command === '/knockout'
   ) {
-    version = String(getCacheValue_('matches_last_sync') || 'matches');
+    version = normalizeCacheVersion_(getCacheValue_('matches_last_sync') || 'matches');
   }
   return 'cmd_' + command + '_' + version;
+}
+
+function normalizeCacheVersion_(value) {
+  if (!value) {
+    return 'none';
+  }
+  if (value instanceof Date) {
+    return String(value.getTime());
+  }
+  var parsed = new Date(value);
+  if (!isNaN(parsed.getTime())) {
+    return String(parsed.getTime());
+  }
+  return String(value);
+}
+
+function warmCommandCaches_() {
+  try {
+    var standings = fetchStandings();
+    setCachedCommandMessages_('/ตารางคะแนน', createStandingsFlexMessages(standings));
+    setCachedCommandMessages_('/เมนูกลุ่ม', [createGroupSelectMenuFlex()]);
+    [1, 2, 3, 4].forEach(function(index) {
+      setCachedCommandMessages_('/ตารางคะแนนชุด ' + index, [createStandingsRangeFlexMessage(standings, index)]);
+    });
+
+    var todayMatches = fetchTodayMatches();
+    var tomorrowMatches = fetchTomorrowMatches();
+    var results = fetchResults();
+    setCachedCommandMessages_('/วันนี้', [createTodayMatchesFlex(todayMatches)]);
+    setCachedCommandMessages_('/พรุ่งนี้', [createTomorrowMatchesFlex(tomorrowMatches)]);
+    setCachedCommandMessages_('/ผลบอล', [createResultsFlex(results)]);
+    setCachedCommandMessages_('/โปรแกรม', [createScheduleMenuFlex()]);
+    setCachedCommandMessages_('/knockout', [createKnockoutMenuFlex()]);
+  } catch (error) {
+    writeLog('ERROR', 'warmCommandCaches failed', serializeError(error));
+  }
 }
 
 function logOutgoingPayloadSizes_(messages) {

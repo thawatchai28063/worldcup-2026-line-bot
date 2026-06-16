@@ -14,6 +14,11 @@ function createTriggers() {
       .inTimezone(getConfiguredTimeZone_())
       .create();
 
+    ScriptApp.newTrigger('scheduledWarmCache')
+      .timeBased()
+      .everyMinutes(5)
+      .create();
+
     writeLog('INFO', 'Created triggers', {});
   } catch (error) {
     writeLog('ERROR', 'createTriggers failed', serializeError(error));
@@ -25,7 +30,7 @@ function deleteTriggers() {
   try {
     ScriptApp.getProjectTriggers().forEach(function(trigger) {
       var handler = trigger.getHandlerFunction();
-      if (handler === 'scheduledSync' || handler === 'scheduledDailySummary') {
+      if (handler === 'scheduledSync' || handler === 'scheduledDailySummary' || handler === 'scheduledWarmCache') {
         ScriptApp.deleteTrigger(trigger);
       }
     });
@@ -41,14 +46,24 @@ function scheduledSync() {
     if (isMockMode()) {
       saveMatches(getMockTodayMatches().concat(getMockTomorrowMatches(), getMockResults()));
       saveStandings(getMockStandings());
+      warmCommandCaches_();
       writeLog('INFO', 'scheduledSync saved mock data', {});
       return;
     }
 
     syncMatchesToSheet();
     syncStandingsToSheet();
+    warmCommandCaches_();
   } catch (error) {
     writeLog('ERROR', 'scheduledSync failed', serializeError(error));
+  }
+}
+
+function scheduledWarmCache() {
+  try {
+    warmCommandCaches_();
+  } catch (error) {
+    writeLog('ERROR', 'scheduledWarmCache failed', serializeError(error));
   }
 }
 
