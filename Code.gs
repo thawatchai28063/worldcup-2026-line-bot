@@ -1,5 +1,6 @@
 var LINE_REPLY_ENDPOINT = 'https://api.line.me/v2/bot/message/reply';
 var LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push';
+var COMMAND_CACHE_TTL_SECONDS = 300;
 
 function runSetupSheets() {
   setupSheets();
@@ -98,47 +99,50 @@ function handleLineEvent(event) {
 function handleTextCommand(replyToken, userMessage) {
   try {
     var command = resolveCommand_(userMessage);
-    var messages;
+    var messages = getCachedCommandMessages_(command);
 
-    if (command === '/ข้อมูลจริง') {
-      messages = [goLiveData()];
-    } else if (command === '/วันนี้') {
-      messages = [createTodayMatchesFlex(fetchTodayMatches())];
-    } else if (command === '/พรุ่งนี้') {
-      messages = [createTomorrowMatchesFlex(fetchTomorrowMatches())];
-    } else if (command.indexOf('/โปรแกรมกลุ่ม ') === 0) {
-      var scheduleGroupName = command.replace('/โปรแกรมกลุ่ม ', '').trim().toUpperCase();
-      messages = createGroupScheduleFlexMessages(scheduleGroupName, fetchGroupMatches(scheduleGroupName));
-    } else if (command === '/โปรแกรมรอบแบ่งกลุ่ม') {
-      messages = createScheduleFlexMessages(fetchGroupStageMatches());
-    } else if (command === '/โปรแกรม') {
-      messages = [createScheduleMenuFlex()];
-    } else if (command === '/ตารางคะแนน') {
-      messages = createStandingsFlexMessages(fetchStandings());
-    } else if (command.indexOf('/ตารางคะแนนชุด ') === 0) {
-      var standingRange = Number(command.replace('/ตารางคะแนนชุด ', '').trim());
-      messages = [createStandingsRangeFlexMessage(fetchStandings(), standingRange)];
-    } else if (command === '/เมนูกลุ่ม') {
-      messages = [createGroupSelectMenuFlex()];
-    } else if (command.indexOf('/กลุ่ม ') === 0) {
-      var groupName = command.replace('/กลุ่ม ', '').trim().toUpperCase();
-      messages = [createGroupStandingFlex(groupName, getGroupStandingData(groupName))];
-    } else if (command === '/knockout') {
-      messages = [createKnockoutMenuFlex()];
-    } else if (command.indexOf('/รอบ ') === 0) {
-      var stageName = command.replace('/รอบ ', '').trim();
-      messages = createKnockoutStageFlexMessages(fetchMatchesByStage(stageName), stageDisplayName_(stageName));
-    } else if (command === '/ผลการแข่งขัน') {
-      messages = createAllResultsFlexMessages(fetchAllResults());
-    } else if (command === '/ผลบอล') {
-      messages = [createResultsFlex(fetchResults())];
-    } else if (command === '/help' || command === 'help') {
-      messages = [createHelpFlex()];
-    } else {
-      messages = [
-        createErrorFlex('ไม่พบคำสั่งนี้ ลองพิมพ์ /help เพื่อดูคำสั่งทั้งหมด'),
-        createHelpFlex()
-      ];
+    if (!messages) {
+      if (command === '/ข้อมูลจริง') {
+        messages = [goLiveData()];
+      } else if (command === '/วันนี้') {
+        messages = [createTodayMatchesFlex(fetchTodayMatches())];
+      } else if (command === '/พรุ่งนี้') {
+        messages = [createTomorrowMatchesFlex(fetchTomorrowMatches())];
+      } else if (command.indexOf('/โปรแกรมกลุ่ม ') === 0) {
+        var scheduleGroupName = command.replace('/โปรแกรมกลุ่ม ', '').trim().toUpperCase();
+        messages = createGroupScheduleFlexMessages(scheduleGroupName, fetchGroupMatches(scheduleGroupName));
+      } else if (command === '/โปรแกรมรอบแบ่งกลุ่ม') {
+        messages = createScheduleFlexMessages(fetchGroupStageMatches());
+      } else if (command === '/โปรแกรม') {
+        messages = [createScheduleMenuFlex()];
+      } else if (command === '/ตารางคะแนน') {
+        messages = createStandingsFlexMessages(fetchStandings());
+      } else if (command.indexOf('/ตารางคะแนนชุด ') === 0) {
+        var standingRange = Number(command.replace('/ตารางคะแนนชุด ', '').trim());
+        messages = [createStandingsRangeFlexMessage(fetchStandings(), standingRange)];
+      } else if (command === '/เมนูกลุ่ม') {
+        messages = [createGroupSelectMenuFlex()];
+      } else if (command.indexOf('/กลุ่ม ') === 0) {
+        var groupName = command.replace('/กลุ่ม ', '').trim().toUpperCase();
+        messages = [createGroupStandingFlex(groupName, getGroupStandingData(groupName))];
+      } else if (command === '/knockout') {
+        messages = [createKnockoutMenuFlex()];
+      } else if (command.indexOf('/รอบ ') === 0) {
+        var stageName = command.replace('/รอบ ', '').trim();
+        messages = createKnockoutStageFlexMessages(fetchMatchesByStage(stageName), stageDisplayName_(stageName));
+      } else if (command === '/ผลการแข่งขัน') {
+        messages = createAllResultsFlexMessages(fetchAllResults());
+      } else if (command === '/ผลบอล') {
+        messages = [createResultsFlex(fetchResults())];
+      } else if (command === '/help' || command === 'help') {
+        messages = [createHelpFlex()];
+      } else {
+        messages = [
+          createErrorFlex('ไม่พบคำสั่งนี้ ลองพิมพ์ /help เพื่อดูคำสั่งทั้งหมด'),
+          createHelpFlex()
+        ];
+      }
+      setCachedCommandMessages_(command, messages);
     }
 
     if (command !== '/help' && command !== 'help') {
@@ -205,6 +209,58 @@ function attachGlobalQuickReply_(messages) {
 
   messages[messages.length - 1].quickReply = quickReply;
   return messages;
+}
+
+function getCachedCommandMessages_(command) {
+  if (!isCacheableCommand_(command)) {
+    return null;
+  }
+
+  try {
+    var text = CacheService.getScriptCache().get(buildCommandCacheKey_(command));
+    return text ? JSON.parse(text) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function setCachedCommandMessages_(command, messages) {
+  if (!isCacheableCommand_(command)) {
+    return;
+  }
+
+  try {
+    var text = JSON.stringify(messages || []);
+    if (text.length < 90000) {
+      CacheService.getScriptCache().put(buildCommandCacheKey_(command), text, COMMAND_CACHE_TTL_SECONDS);
+    }
+  } catch (error) {
+    // Best-effort command cache only.
+  }
+}
+
+function isCacheableCommand_(command) {
+  return command !== '/ข้อมูลจริง' && command !== '/help' && command !== 'help';
+}
+
+function buildCommandCacheKey_(command) {
+  var version = 'static';
+  if (command === '/ตารางคะแนน' || command.indexOf('/ตารางคะแนนชุด ') === 0 || command === '/เมนูกลุ่ม' || command.indexOf('/กลุ่ม ') === 0) {
+    version = String(getCacheValue_('standings_last_sync') || 'standings');
+  } else if (
+    command === '/วันนี้' ||
+    command === '/พรุ่งนี้' ||
+    command === '/ผลบอล' ||
+    command === '/ผลการแข่งขัน' ||
+    command === '/โปรแกรมรอบแบ่งกลุ่ม' ||
+    command === '/โปรแกรม' ||
+    command.indexOf('/โปรแกรมกลุ่ม ') === 0 ||
+    command.indexOf('/รอบ ') === 0 ||
+    command === '/knockout'
+  ) {
+    version = String(getCacheValue_('matches_last_sync') || 'matches');
+  }
+  return 'cmd_' + command + '_' + version;
 }
 
 function logOutgoingPayloadSizes_(messages) {
@@ -370,16 +426,31 @@ function resolveCommand_(text) {
   if (command === '/standings') {
     return '/ตารางคะแนน';
   }
+  if (command === '/standing') {
+    return '/ตารางคะแนน';
+  }
   if (command === '/standings1') {
+    return '/ตารางคะแนนชุด 1';
+  }
+  if (command === '/standing1') {
     return '/ตารางคะแนนชุด 1';
   }
   if (command === '/standings2') {
     return '/ตารางคะแนนชุด 2';
   }
+  if (command === '/standing2') {
+    return '/ตารางคะแนนชุด 2';
+  }
   if (command === '/standings3') {
     return '/ตารางคะแนนชุด 3';
   }
+  if (command === '/standing3') {
+    return '/ตารางคะแนนชุด 3';
+  }
   if (command === '/standings4') {
+    return '/ตารางคะแนนชุด 4';
+  }
+  if (command === '/standing4') {
     return '/ตารางคะแนนชุด 4';
   }
   if (command === '/groups' || command === '/group' || command === 'groups' || command === 'group' || command === 'กลุ่ม' || command === 'เลือกกลุ่ม') {
